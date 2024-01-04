@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -80,8 +81,39 @@ func ReportFailedStatus() {
 	}
 }
 
+func mean(numbers []float64) float64 {
+	if len(numbers) == 0 {
+		return 0
+	}
+	var total float64 = 0
+	for _, v := range numbers {
+		total += v
+	}
+	return total / float64(len(numbers))
+}
+
+func calculateP(numbers []float64, rate float64) float64 {
+	if len(numbers) == 0 {
+		return 0
+	}
+	sort.Float64s(numbers)                     // 对切片排序
+	index := int(float64(len(numbers)) * 0.99) // 计算 P99 的索引位置
+	if index == 0 {
+		return numbers[0]
+	}
+	return numbers[index-1] // 获取 P99 的值
+}
+
 func ReportLatencyHistogram(latency []float64) {
+	// calc P99 latency
+
 	hist := histogram.Hist(9, latency)
+
+	p99 := time.Duration(calculateP(latency, 0.99) * 1000 / 1000).String()
+	p95 := time.Duration(calculateP(latency, 0.95) * 1000 / 1000).String()
+	mean := time.Duration(mean(latency) * 1000 / 1000).String()
+
+	fmt.Printf("p99:%v, p95:%v, mean:%v\n", p99, p95, mean)
 	err := histogram.Fprintf(os.Stdout, hist, histogram.Linear(5), func(v float64) string {
 		_v := math.Round(v*1000) / 1000
 		return time.Duration(_v).String()
