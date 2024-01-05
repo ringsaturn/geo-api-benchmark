@@ -21,13 +21,14 @@ import (
 )
 
 var (
-	countryCode = flag.String("country", "", "Country code")
-	coordsOrder = flag.String("coords", "lat,lon", "Coordinates order, `lat,lon` or `lon,lat`")
-	apiTPL      = flag.String("api", "http://localhost:8000/foo?lat=%s&lon=%s", "API URL template")
-	qps         = flag.Int("qps", 10, "Queries per second")
-	threads     = flag.Int("threads", 10, "Number of threads")
-	runs        = flag.Int("runs", 10, "Run how many cities in one batch")
-	timeout     = flag.Int("timeout", 10, "Timeout in seconds")
+	countryCode  = flag.String("country", "", "Country code")
+	coordsOrder  = flag.String("coords", "lat,lon", "Coordinates order, `lat,lon` or `lon,lat`")
+	apiTPL       = flag.String("api", "http://localhost:8000/foo?lat=%s&lon=%s", "API URL template")
+	qps          = flag.Int("qps", 10, "Queries per second")
+	threads      = flag.Int("threads", 10, "Number of threads")
+	runs         = flag.Int("runs", 10, "Run how many cities in one batch")
+	timeout      = flag.Int("timeout", 10, "Timeout in seconds")
+	randomOffset = flag.Bool("randomOffset", false, "Random offset for each request")
 
 	cities []*gocitiesjson.City
 
@@ -125,6 +126,13 @@ func ReportLatencyHistogram(latency []float64) {
 
 func Req(ctx context.Context, city *gocitiesjson.City) {
 	var url string
+
+	_lng := city.Lng
+	_lat := city.Lat
+	if *randomOffset {
+		_lng += rand.Float64() * 0.03
+		_lat += rand.Float64() * 0.03
+	}
 	if *coordsOrder == "lat,lon" {
 		url = fmt.Sprintf(*apiTPL, city.Lat, city.Lng)
 	} else {
